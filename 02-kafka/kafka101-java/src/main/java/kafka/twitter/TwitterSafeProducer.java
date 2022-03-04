@@ -129,7 +129,7 @@ public class TwitterSafeProducer {
     }
 
     public KafkaProducer<String, String> createKafkaProducer() {
-        String bootstrapServers = "localhost:9092";
+        String bootstrapServers = "3.235.59.95:9092";
 
         // create Producer properties
         Properties properties = new Properties();

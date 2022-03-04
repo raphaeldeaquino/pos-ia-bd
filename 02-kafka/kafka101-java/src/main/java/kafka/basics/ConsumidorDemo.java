@@ -18,7 +18,7 @@ public class ConsumidorDemo {
 
         Logger logger = LoggerFactory.getLogger(ConsumidorDemo.class.getName());
 
-        String bootstrapServers = "127.0.0.1:9092";
+        String bootstrapServers = "3.235.59.95:9092";
         String groupId = "minha-primeira-app";
         String topic = "primeiro_topico";
 

@@ -1,0 +1,919 @@
+# Índices ------------------------------------------------------------
+
+# Checking the cluster's health
+GET /_cluster/health
+
+# Listing the cluster's nodes
+GET /_cat/nodes?v
+
+# Listing the cluster's indices
+GET /_cat/indices?v
+
+# Listing the cluster's shards
+GET /_cat/shards?v
+
+# Creating a new index
+PUT /pages
+
+# Deleting an index
+DELETE /pages
+
+# Creating an index (with settings)
+PUT /products
+{
+  "settings": {
+    "number_of_shards": 2,
+    "number_of_replicas": 2
+  }
+}
+
+# Documentos ------------------------------------------------------------
+
+# Indexing document with auto generated ID:
+POST /products/_doc
+{
+  "name": "Coffee Maker",
+  "price": 64,
+  "in_stock": 10
+}
+
+# Indexing document with custom ID:
+PUT /products/_doc/100
+{
+  "name": "Toaster",
+  "price": 49,
+  "in_stock": 4
+}
+
+# Retrieving documents by ID
+GET /products/_doc/100
+
+# Updating an existing field
+POST /products/_update/100
+{
+  "doc": {
+    "in_stock": 3
+  }
+}
+
+# Adding a new field
+POST /products/_update/100
+{
+  "doc": {
+    "tags": ["electronics"]
+  }
+}
+
+# Reducing the current value of in_stock by one
+POST /products/_update/100
+{
+  "script": {
+    "source": "ctx._source.in_stock--"
+  }
+}
+
+# Assigning an arbitrary value to in_stock
+POST /products/_update/100
+{
+  "script": {
+    "source": "ctx._source.in_stock = 10"
+  }
+}
+
+# Using parameters within scripts
+POST /products/_update/100
+{
+  "script": {
+    "source": "ctx._source.in_stock -= params.quantity",
+    "params": {
+      "quantity": 4
+    }
+  }
+}
+
+# Replacing documents
+PUT /products/_doc/100
+{
+  "name": "Toaster",
+  "price": 79,
+  "in_stock": 4
+}
+
+# Deleting documents
+DELETE /products/_doc/101
+
+# Importing data into Elastic Cloud
+curl -H "Content-Type: application/x-ndjson" -XPOST https://i9gquu55hc:r9o5hptuuy@pos-ia-5996654336.us-east-1.bonsaisearch.net:443/products/_bulk --data-binary "@02-products-bulk.json"
+
+# Buscas ------------------------------------------------------------
+
+# Matching all documents
+GET /products/_search?q=*
+
+# Matching documents containing the term Lobster
+GET /products/_search?q=name:Lobster
+
+# Matching documents containing the tag Meat
+GET /products/_search?q=tags:Meat
+
+# Matching documents containing the tag Meat and name Tuna
+GET /products/_search?q=tags:Meat AND name:Tuna
+
+# Matching all documents
+POST /products/_search
+{
+  "query": {
+    "match_all": {}
+  }
+}
+
+# Understanding relevance scores
+POST /products/_search
+{
+  "explain": true,
+  "query": {
+    "term": {
+      "name": "lobster"
+    }
+  }
+}
+
+# Term level queries are not analyzed
+POST /products/_search
+{
+  "query": {
+    "term": {
+      "name": "lobster"
+    }
+  }
+}
+POST /products/_search
+{
+  "query": {
+    "term": {
+      "name": "Lobster"
+    }
+  }
+}
+
+# Full-text queries are analyzed
+POST /products/_search
+{
+  "query": {
+    "match": {
+      "name": "Lobster"
+    }
+  }
+}
+
+# Matching documents with an in_stock field of between 1 and 5, both included
+POST /products/_search
+{
+  "query": {
+    "range": {
+      "in_stock": {
+        "gte": 1,
+        "lte": 5
+      }
+    }
+  }
+}
+
+# Matching documents with a date range
+POST /products/_search
+{
+  "query": {
+    "range": {
+      "created": {
+        "gte": "2010/01/01",
+        "lte": "2010/12/31"
+      }
+    }
+  }
+}
+
+# Matching documents with a date range and custom date format
+POST /products/_search
+{
+  "query": {
+    "range": {
+      "created": {
+        "gte": "01-01-2010",
+        "lte": "31-12-2010",
+        "format": "dd-MM-yyyy"
+      }
+    }
+  }
+}
+
+# Matching documents with non-null values
+POST /products/_search
+{
+  "query": {
+    "exists": {
+      "field": "tags"
+    }
+  }
+}
+
+# Matching documents containing a tag beginning with Vege
+POST /products/_search
+{
+  "query": {
+    "prefix": {
+      "tags.keyword": "Vege"
+    }
+  }
+}
+
+# Adding an asterisk for any characters (zero or more)
+POST /products/_search
+{
+  "query": {
+    "wildcard": {
+      "tags.keyword": "Veg*ble"
+    }
+  }
+}
+
+# Adding a question mark for any single character
+POST /products/_search
+{
+  "query": {
+    "wildcard": {
+      "tags.keyword": "Veg?ble"
+    }
+  }
+}
+
+# Searching with regular expressions
+POST /products/_search
+{
+  "query": {
+    "regexp": {
+      "tags.keyword": "Veg[a-zA-Z]+ble"
+    }
+  }
+}
+
+# Filtros ------------------------------------------------------------
+
+PUT /recipe
+
+curl -H "Content-Type: application/x-ndjson" -XPOST https://i9gquu55hc:r9o5hptuuy@pos-ia-5996654336.us-east-1.bonsaisearch.net:443/recipe/_bulk --data-binary "@03-recipes.json"
+
+# Adding query clauses to the must key
+POST /recipe/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "ingredients.name": "parmesan"
+          }
+        },
+        {
+          "range": {
+            "preparation_time_minutes": {
+              "lte": 15
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+# Moving the range query to the filter key
+POST /recipe/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "ingredients.name": "parmesan"
+          }
+        }
+      ],
+      "filter": [
+        {
+          "range": {
+            "preparation_time_minutes": {
+              "lte": 15
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+# Adding a query clause to the must_not key
+POST /recipe/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "ingredients.name": "parmesan"
+          }
+        }
+      ],
+      "must_not": [
+        {
+          "match": {
+            "ingredients.name": "tuna"
+          }
+        }
+      ],
+      "filter": [
+        {
+          "range": {
+            "preparation_time_minutes": {
+              "lte": 15
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+# Adding a query clause to the should key
+POST /recipe/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "ingredients.name": "parmesan"
+          }
+        }
+      ],
+      "must_not": [
+        {
+          "match": {
+            "ingredients.name": "tuna"
+          }
+        }
+      ],
+      "should": [
+        {
+          "match": {
+            "ingredients.name": "parsley"
+          }
+        }
+      ],
+      "filter": [
+        {
+          "range": {
+            "preparation_time_minutes": {
+              "lte": 15
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+
+# The behavior of should query clauses depends
+POST /recipe/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "ingredients.name": "pasta"
+          }
+        }
+      ],
+      "should": [
+        {
+          "match": {
+            "ingredients.name": "parmesan"
+          }
+        }
+      ]
+    }
+  }
+}
+POST /recipe/_search
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "match": {
+            "ingredients.name": "parmesan"
+          }
+        }
+      ]
+    }
+  }
+}
+
+# Mapeamento ------------------------------------------------------------
+
+POST /products/_search
+{
+  "query": {
+    "term": {
+      "name": "lobster"
+    }
+  }
+}
+
+DELETE /products
+
+PUT /products
+{
+  "settings": {
+    "number_of_shards": 2,
+    "number_of_replicas": 2
+  },
+  "mappings": {
+    "properties": {
+      "name": { "type": "keyword"},
+      "price": { "type": "float"},
+      "in_stock": { "type": "integer"},
+      "sold": { "type": "integer"},
+      "description": { "type": "text"},
+      "is_active": { "type": "boolean"},
+      "created": { "type": "date", "format": "yyyy/MM/dd"}
+    }
+  }
+}
+
+curl -H "Content-Type: application/x-ndjson" -XPOST https://i9gquu55hc:r9o5hptuuy@pos-ia-5996654336.us-east-1.bonsaisearch.net:443/products/_bulk --data-binary "@02-products-bulk.json"
+
+POST /products/_search
+{
+  "query": {
+    "match_all": {}
+  }
+}
+
+POST /products/_search
+{
+  "query": {
+    "term": {
+      "name": "lobster"
+    }
+  }
+}
+
+POST /products/_search
+{
+  "query": {
+    "prefix": {
+      "tags.keyword": "Vege"
+    }
+  }
+}
+
+
+# Analisadores ------------------------------------------------------------
+
+# Analyzing a string with the standard analyzer
+POST /_analyze
+{
+  "text": "2 guys walk into   a bar, but the third... DUCKS! :-)",
+  "analyzer": "standard"
+}
+
+POST /_analyze
+{
+  "text": "2 guys walk into   a bar, but the third... DUCKS! :-)",
+  "analyzer": "simple"
+}
+
+POST /_analyze
+{
+  "text": "2 guys walk into   a bar, but the third... DUCKS! :-)",
+  "analyzer": "whitespace"
+}
+
+POST /_analyze
+{
+  "text": "2 guys walk into   a bar, but the third... DUCKS! :-)",
+  "analyzer": "english"
+}
+
+POST /_analyze
+{
+  "text": "2 homens entraram em   um bar, mas o terceiro... DUCKS! :-)",
+  "analyzer": "brazilian"
+}
+
+
+# Agregações ------------------------------------------------------------
+
+# Adding order index and mappings
+PUT /order
+{
+  "mappings": {
+    "properties": {
+      "purchased_at": {
+        "type": "date"
+      },
+      "lines": {
+        "type": "nested",
+        "properties": {
+          "product_id": {
+            "type": "integer"
+          },
+          "amount": {
+            "type": "double"
+          },
+          "quantity": {
+            "type": "short"
+          }
+        }
+      },
+      "total_amount": {
+        "type": "double"
+      },
+      "status": {
+        "type": "keyword"
+      },
+      "sales_channel": {
+        "type": "keyword"
+      },
+      "salesman": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "text"
+          }
+        }
+      }
+    }
+  }
+}
+
+# Populating the order index with test data
+curl -H "Content-Type: application/x-ndjson" -XPOST https://i9gquu55hc:r9o5hptuuy@pos-ia-5996654336.us-east-1.bonsaisearch.net:443/order/_bulk --data-binary "@04-orders-bulk.json"
+
+
+# Calculating statistics with sum, avg, min, and max aggregations
+POST /order/_search
+{
+  "size": 0,
+  "aggs": {
+    "total_sales": {
+      "sum": {
+        "field": "total_amount"
+      }
+    },
+    "avg_sale": {
+      "avg": {
+        "field": "total_amount"
+      }
+    },
+    "min_sale": {
+      "min": {
+        "field": "total_amount"
+      }
+    },
+    "max_sale": {
+      "max": {
+        "field": "total_amount"
+      }
+    }
+  }
+}
+
+# Retrieving the number of distinct values
+POST /order/_search
+{
+  "size": 0,
+  "aggs": {
+    "total_salesmen": {
+      "cardinality": {
+        "field": "salesman.id"
+      }
+    }
+  }
+}
+
+# Retrieving the number of values
+POST /order/_search
+{
+  "size": 0,
+  "aggs": {
+    "values_count": {
+      "value_count": {
+        "field": "total_amount"
+      }
+    }
+  }
+}
+
+# Using stats aggregation for common statistics
+POST /order/_search
+{
+  "size": 0,
+  "aggs": {
+    "amount_stats": {
+      "stats": {
+        "field": "total_amount"
+      }
+    }
+  }
+}
+
+# Distribution of total_amount with interval 25
+POST /order/_search
+{
+  "size": 0,
+  "aggs": {
+    "amount_distribution": {
+      "histogram": {
+        "field": "total_amount",
+        "interval": 25
+      }
+    }
+  }
+}
+
+# Requiring minimum 1 document per bucket
+POST /order/_search
+{
+  "size": 0,
+  "aggs": {
+    "amount_distribution": {
+      "histogram": {
+        "field": "total_amount",
+        "interval": 25,
+        "min_doc_count": 1
+      }
+    }
+  }
+}
+
+# Specifying fixed bucket boundaries
+POST /order/_search
+{
+  "size": 0,
+  "query": {
+    "range": {
+      "total_amount": {
+        "gte": 100
+      }
+    }
+  },
+  "aggs": {
+    "amount_distribution": {
+      "histogram": {
+        "field": "total_amount",
+        "interval": 25,
+        "min_doc_count": 0,
+        "extended_bounds": {
+          "min": 0,
+          "max": 500
+        }
+      }
+    }
+  }
+}
+
+# Aggregating by month with the date_histogram aggregation
+POST /order/_search
+{
+  "size": 0,
+  "aggs": {
+    "orders_over_time": {
+      "date_histogram": {
+        "field": "purchased_at",
+        "calendar_interval": "month"
+      }
+    }
+  }
+}
+
+
+PUT /proximity
+
+# Adding test documents
+PUT /_bulk
+{ "index" : { "_index" : "proximity", "_id" : "1" } }
+{ "title" : "Spicy Sauce" }
+{ "index" : { "_index" : "proximity", "_id" : "2" } }
+{ "title" : "Spicy Tomato Sauce" }
+{ "index" : { "_index" : "proximity", "_id" : "3" } }
+{ "title" : "Spicy Tomato and Garlic Sauce" }
+{ "index" : { "_index" : "proximity", "_id" : "4" } }
+{ "title" : "Tomato Sauce (spicy)" }
+{ "index" : { "_index" : "proximity", "_id" : "5" } }
+{ "title" : "Spicy and very delicious Tomato Sauce" }
+
+# Adding the slop parameter to a match_phrase query
+POST /proximity/_search
+{
+  "query": {
+    "match_phrase": {
+      "title": {
+        "query": "spicy sauce",
+        "slop": 1
+      }
+    }
+  }
+}
+GET /proximity/_search
+{
+  "query": {
+    "match_phrase": {
+      "title": {
+        "query": "spicy sauce",
+        "slop": 2
+      }
+    }
+  }
+}
+
+# Searching with fuzziness set to auto
+POST /products/_search
+{
+  "query": {
+    "match": {
+      "name": {
+        "query": "l0bster",
+        "fuzziness": "auto"
+      }
+    }
+  }
+}
+POST /products/_search
+{
+  "query": {
+    "match": {
+      "name": {
+        "query": "lobster",
+        "fuzziness": "auto"
+      }
+    }
+  }
+}
+
+# Creating index with custom analyzer
+PUT /synonyms
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "synonym_test": {
+          "type": "synonym", 
+          "synonyms": [
+            "awful => terrible",
+            "awesome => great, super",
+            "elasticsearch, logstash, kibana => elk",
+            "weird, strange"
+          ]
+        }
+      },
+      "analyzer": {
+        "my_analyzer": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "synonym_test"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "description": {
+        "type": "text",
+        "analyzer": "my_analyzer"
+      }
+    }
+  }
+}
+
+# Testing the analyzer (with synonyms)
+POST /synonyms/_analyze
+{
+  "analyzer": "my_analyzer",
+  "text": "awesome"
+}
+POST /synonyms/_analyze
+{
+  "analyzer": "my_analyzer",
+  "text": "Elasticsearch"
+}
+POST /synonyms/_analyze
+{
+  "analyzer": "my_analyzer",
+  "text": "weird"
+}
+POST /synonyms/_analyze
+{
+  "analyzer": "my_analyzer",
+  "text": "Elasticsearch is awesome, but can also seem weird sometimes."
+}
+
+# Adding a test document
+POST /synonyms/_doc
+{
+  "description": "Elasticsearch is awesome, but can also seem weird sometimes."
+}
+
+# Searching the index for synonyms
+POST /synonyms/_search
+{
+  "query": {
+    "match": {
+      "description": "great"
+    }
+  }
+}
+POST /synonyms/_search
+{
+  "query": {
+    "match": {
+      "description": "awesome"
+    }
+  }
+}
+
+# Creating a test index
+PUT /stemming_test
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "synonym_test": {
+          "type": "synonym",
+          "synonyms": [
+            "firm => company",
+            "love, enjoy"
+          ]
+        },
+        "stemmer_test" : {
+          "type" : "stemmer",
+          "name" : "english"
+        }
+      },
+      "analyzer": {
+        "my_analyzer": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "synonym_test",
+            "stemmer_test"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "description": {
+        "type": "text",
+        "analyzer": "my_analyzer"
+      }
+    }
+  }
+}
+
+# Adding a test document
+PUT /stemming_test/_doc/1
+{
+  "description": "I love working for my firm!"
+}
+
+# Matching the document with the base word (work)
+POST /stemming_test/_search
+{
+  "query": {
+    "match": {
+      "description": "enjoy work"
+    }
+  }
+}
+
+# Synonyms and stemmed words are still highlighted
+POST /stemming_test/_search
+{
+  "query": {
+    "match": {
+      "description": "enjoy work"
+    }
+  },
+  "highlight": {
+    "fields": {
+      "description": {}
+    }
+  }
+}
